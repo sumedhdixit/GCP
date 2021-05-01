@@ -37,7 +37,9 @@ WHERE
 
 ```bash
 export PROJECT_ID=DEVSHELL_PROJECT_ID
+```
 
+```bash
 bq query --use_legacy_sql=false "CREATE OR REPLACE MODEL austin.austin_1 OPTIONS(input_label_cols=['duration_minutes'], model_type='linear_reg') AS SELECT duration_minutes, location, start_station_name, CAST(EXTRACT(dayofweek FROM start_time) AS STRING) as dayofweek, CAST(EXTRACT(hour FROM start_time) AS STRING) AS hourofday, FROM \`bigquery-public-data.austin_bikeshare.bikeshare_trips\` AS trips JOIN \`bigquery-public-data.austin_bikeshare.bikeshare_stations\` AS stations ON trips.start_station_id = stations.station_id WHERE EXTRACT(year from start_time) = 2018"
 
 ```
