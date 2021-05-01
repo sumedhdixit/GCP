@@ -33,7 +33,7 @@ WHERE
 
 ```
 
-### If above doesn't work try This Cloud Shell ->
+### If above doesn't work try This In Cloud Shell ->
 
 ```bash
 export PROJECT_ID=DEVSHELL_PROJECT_ID
