@@ -50,7 +50,7 @@ gcloud sql instances create griffin-dev-db --root-password password --region=us-
 gcloud sql connect griffin-dev-db
 
 CREATE DATABASE wordpress;
-GRANT ALL PRIVILEGES ON wordpress.\* TO "wp_user"@"%" IDENTIFIED BY "stormwind_rules";
+GRANT ALL PRIVILEGES ON wordpress.* TO "wp_user"@"%" IDENTIFIED BY "stormwind_rules";
 FLUSH PRIVILEGES;
 
 exit
