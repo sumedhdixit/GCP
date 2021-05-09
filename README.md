@@ -1,345 +1,82 @@
-# GSP787 : Insights from Data with BigQuery: Challenge Lab
+# GSP330 : Implement DevOps in Google Cloud: Challenge Lab
 
----
+```bash
+gcloud config set compute/zone us-east1-b
 
-## Navigation Menu -> BigQuery.
+git clone https://source.developers.google.com/p/$DEVSHELL_PROJECT_ID/r/sample-app
 
----
+gcloud container clusters get-credentials jenkins-cd
 
-## Task - 1 : Total Confirmed Cases
+kubectl create clusterrolebinding cluster-admin-binding --clusterrole=cluster-admin --user=$(gcloud config get-value account)
 
-```SQL
+helm repo add stable https://kubernetes-charts.storage.googleapis.com/   #this might not work… use the next line of code instead…
 
-SELECT sum(cumulative_confirmed) as total_cases_worldwide FROM `bigquery-public-data.covid19_open_data.covid19_open_data` where date='2020-04-15'
-```
+helm repo add stable https://charts.helm.sh/stable
 
----
+helm repo update
 
-## Task - 2 : Worst Affected Areas
+helm install cd stable/jenkins
 
-```SQL
-with deaths_by_states as (
+kubectl get pods
 
-SELECT subregion1_name as state, sum(cumulative_deceased) as death_count
+export POD_NAME=$(kubectl get pods --namespace default -l "app.kubernetes.io/component=jenkins-master" -l "app.kubernetes.io/instance=cd" -o jsonpath="{.items[0].metadata.name}")
+kubectl port-forward $POD_NAME 8080:8080 >> /dev/null &
+printf $(kubectl get secret cd-jenkins -o jsonpath="{.data.jenkins-admin-password}" | base64 --decode);echo
 
-FROM `bigquery-public-data.covid19_open_data.covid19_open_data`
 
-where country_name="United States of America" and date='2020-04-10' and subregion1_name is NOT NULL
+cd sample-app
+kubectl create ns production
+kubectl apply -f k8s/production -n production
+kubectl apply -f k8s/canary -n production
+kubectl apply -f k8s/services -n production
 
-group by subregion1_name
+kubectl get svc
+kubectl get service gceme-frontend -n production
 
-)
 
-select count(*) as count_of_states
+##Branch Sources: Git
+            - Project Repository: https://source.developers.google.com/p/[PROJECT_ID]/r/sample-app
+            - Credentials: qwiklabs service account
 
-from deaths_by_states
+click Periodically if not...... 1 min
 
-where death_count > 100
-```
+git init
+git config credential.helper gcloud.sh
+git remote add origin https://source.developers.google.com/p/$DEVSHELL_PROJECT_ID/r/sample-app
+git config --global user.email "<user email>"
+git config --global user.name "<user name>"
+git add .
+git commit -m "initial commit"
+git push origin master
 
----
 
-## Task - 3 : Identifying Hotspots
+#save
 
-```SQL
-SELECT * FROM (
 
-SELECT subregion1_name as state, sum(cumulative_confirmed) as total_confirmed_cases
+git checkout -b new-feature
 
-FROM `bigquery-public-data.covid19_open_data.covid19_open_data`
+git add Jenkinsfile html.go main.go
+git commit -m "Version 2.0.0"
+git push origin new-feature
 
-WHERE country_code="US" AND date='2020-04-10' AND subregion1_name is NOT NULL
+curl http://localhost:8001/api/v1/namespaces/new-feature/services/gceme-frontend:80/proxy/version
+kubectl get service gceme-frontend -n production
+git checkout -b canary
+git push origin canary
+export FRONTEND_SERVICE_IP=$(kubectl get -o \
+jsonpath="{.status.loadBalancer.ingress[0].ip}" --namespace=production services gceme-frontend)
+git checkout master
+git push origin master
 
-GROUP BY subregion1_name
 
-ORDER BY total_confirmed_cases DESC ) WHERE total_confirmed_cases > 1000
-```
+export FRONTEND_SERVICE_IP=$(kubectl get -o \
+jsonpath="{.status.loadBalancer.ingress[0].ip}" --namespace=production services gceme-frontend)
+while true; do curl http://$FRONTEND_SERVICE_IP/version; sleep 1; done
 
----
+kubectl get service gceme-frontend -n production
 
-## Task - 4 : Fatality Ratio
-
-```SQL
-
-SELECT sum(cumulative_confirmed) as total_confirmed_cases, sum(cumulative_deceased) as total_deaths, (sum(cumulative_deceased)/sum(cumulative_confirmed))*100 as case_fatality_ratio
-
-FROM `bigquery-public-data.covid19_open_data.covid19_open_data`
-
-where country_name="Italy" AND date BETWEEN '2020-04-01'and '2020-04-30'
-
-```
-
----
-
-## Task - 5 : Identifying specific day
-
-```SQL
-SELECT date
-
-FROM `bigquery-public-data.covid19_open_data.covid19_open_data`
-
-where country_name="Italy" and cumulative_deceased>10000
-
-order by date asc
-
-limit 1
-```
-
----
-
-## Task - 6 : Finding days with zero net new cases :-
-
-```SQL
-WITH india_cases_by_date AS (
-
-  SELECT
-
-    date,
-
-    SUM( cumulative_confirmed ) AS cases
-
-  FROM
-
-    `bigquery-public-data.covid19_open_data.covid19_open_data`
-
-  WHERE
-
-    country_name ="India"
-
-    AND date between '2020-02-21' and '2020-03-15'
-
-  GROUP BY
-
-    date
-
-  ORDER BY
-
-    date ASC
-
- )
-
-, india_previous_day_comparison AS
-
-(SELECT
-
-  date,
-
-  cases,
-
-  LAG(cases) OVER(ORDER BY date) AS previous_day,
-
-  cases - LAG(cases) OVER(ORDER BY date) AS net_new_cases
-
-FROM india_cases_by_date
-
-)
-
-select count(*)
-
-from india_previous_day_comparison
-
-where net_new_cases=0
-
-```
-
----
-
-## Task - 7 : Doubling rate
-
-```SQL
-WITH us_cases_by_date AS (
-
-  SELECT
-
-    date,
-
-    SUM(cumulative_confirmed) AS cases
-
-  FROM
-
-    `bigquery-public-data.covid19_open_data.covid19_open_data`
-
-  WHERE
-
-    country_name="United States of America"
-
-    AND date between '2020-03-22' and '2020-04-20'
-
-  GROUP BY
-
-    date
-
-  ORDER BY
-
-    date ASC
-
- )
-
-
-
-, us_previous_day_comparison AS
-
-(SELECT
-
-  date,
-
-  cases,
-
-  LAG(cases) OVER(ORDER BY date) AS previous_day,
-
-  cases - LAG(cases) OVER(ORDER BY date) AS net_new_cases,
-
-  (cases - LAG(cases) OVER(ORDER BY date))*100/LAG(cases) OVER(ORDER BY date) AS percentage_increase
-
-FROM us_cases_by_date
-
-)
-
-
-
-select Date, cases as Confirmed_Cases_On_Day, previous_day as Confirmed_Cases_Previous_Day, percentage_increase as Percentage_Increase_In_Cases
-
-from us_previous_day_comparison
-
-where percentage_increase > 10
-```
-
----
-
-## Task - 8 : Recovery rate
-
-```SQL
-WITH cases_by_country AS (
-
-  SELECT
-
-    country_name AS country,
-
-    sum(cumulative_confirmed) AS cases,
-
-    sum(cumulative_recovered) AS recovered_cases
-
-  FROM
-
-    bigquery-public-data.covid19_open_data.covid19_open_data
-
-  WHERE
-
-    date = '2020-05-10'
-
-  GROUP BY
-
-    country_name
-
- )
-
-
-
-, recovered_rate AS
-
-(SELECT
-
-  country, cases, recovered_cases,
-
-  (recovered_cases * 100)/cases AS recovery_rate
-
-FROM cases_by_country
-
-)
-
-
-
-SELECT country, cases AS confirmed_cases, recovered_cases, recovery_rate
-
-FROM recovered_rate
-
-WHERE cases > 50000
-
-ORDER BY recovery_rate desc
-
-LIMIT 10
-```
-
----
-
-## Task - 9 : CDGR - Cumulative Daily Growth Rate
-
-```SQL
-WITH
-
-  france_cases AS (
-
-  SELECT
-
-    date,
-
-    SUM(cumulative_confirmed) AS total_cases
-
-  FROM
-
-    `bigquery-public-data.covid19_open_data.covid19_open_data`
-
-  WHERE
-
-    country_name="France"
-
-    AND date IN ('2020-01-24',
-
-      '2020-05-10')
-
-  GROUP BY
-
-    date
-
-  ORDER BY
-
-    date)
-
-, summary as (
-
-SELECT
-
-  total_cases AS first_day_cases,
-
-  LEAD(total_cases) OVER(ORDER BY date) AS last_day_cases,
-
-  DATE_DIFF(LEAD(date) OVER(ORDER BY date),date, day) AS days_diff
-
-FROM
-
-  france_cases
-
-LIMIT 1
-
-)
-
-select first_day_cases, last_day_cases, days_diff, POW((last_day_cases/first_day_cases),(1/days_diff))-1 as cdgr
-
-from summary
-```
-
----
-
-## Task - 10 : Create a Datastudio report
-
-```SQL
-SELECT
-
-  date, SUM(cumulative_confirmed) AS country_cases,
-
-  SUM(cumulative_deceased) AS country_deaths
-
-FROM
-
-  `bigquery-public-data.covid19_open_data.covid19_open_data`
-
-WHERE
-
-  date BETWEEN '2020-03-15'
-
-  AND '2020-04-30'
-
-  AND country_name ="United States of America"
-
-GROUP BY date
+git merge canary
+git push origin master
+export FRONTEND_SERVICE_IP=$(kubectl get -o \
+jsonpath="{.status.loadBalancer.ingress[0].ip}" --namespace=production services gceme-frontend)
 ```
