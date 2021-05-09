@@ -1,127 +1,242 @@
-# GSP321 : Set Up and Configure a Cloud Environment in Google Cloud: Challenge Lab
+# GSP329 : Integrate with Machine Learning APIs: Challenge Lab
 
-## Task - 1 : Create development VPC manually
-
-```bash
-gcloud compute networks create griffin-dev-vpc --subnet-mode custom
-
-gcloud compute networks subnets create griffin-dev-wp --network=griffin-dev-vpc --region us-east1 --range=192.168.16.0/20
-
-gcloud compute networks subnets create griffin-dev-mgmt --network=griffin-dev-vpc --region us-east1 --range=192.168.32.0/20
-```
-
-## Task - 2 : Create production VPC manually
-
-```bash
-gsutil cp -r gs://cloud-training/gsp321/dm .
-
-cd dm
-
-sed -i s/SET_REGION/us-east1/g prod-network.yaml
-
-gcloud deployment-manager deployments create prod-network \
- --config=prod-network.yaml
-
-cd ..
-
-```
-
-## Task - 3 : Create bastion host
-
-```bash
-gcloud compute instances create bastion --network-interface=network=griffin-dev-vpc,subnet=griffin-dev-mgmt --network-interface=network=griffin-prod-vpc,subnet=griffin-prod-mgmt --tags=ssh --zone=us-east1-b
-```
+---
 
 ```bash
 
-gcloud compute firewall-rules create fw-ssh-dev --source-ranges=0.0.0.0/0 --target-tags ssh --allow=tcp:22 --network=griffin-dev-vpc
-```
-
-```bash
-gcloud compute firewall-rules create fw-ssh-prod --source-ranges=0.0.0.0/0 --target-tags ssh --allow=tcp:22 --network=griffin-prod-vpc
-```
-
-## Task - 4 : Create and configure Cloud SQL Instance
-
-```bash
-
-gcloud sql instances create griffin-dev-db --root-password password --region=us-east1
-
-gcloud sql connect griffin-dev-db
-
-CREATE DATABASE wordpress;
-GRANT ALL PRIVILEGES ON wordpress.* TO "wp_user"@"%" IDENTIFIED BY "stormwind_rules";
-FLUSH PRIVILEGES;
-
-exit
-```
-
-## Task - 5 : Create Kubernetes cluster
-
-```bash
-
-gcloud container clusters create griffin-dev \
- --network griffin-dev-vpc \
- --subnetwork griffin-dev-wp \
- --machine-type n1-standard-4 \
- --num-nodes 2 \
- --zone us-east1-b
-
-gcloud container clusters get-credentials griffin-dev --zone us-east1-b
-
-cd ~/
-
-gsutil cp -r gs://cloud-training/gsp321/wp-k8s .
+export SANAME=challenge
+gcloud iam service-accounts create $SANAME
+gcloud projects add-iam-policy-binding $DEVSHELL_PROJECT_ID --member=serviceAccount:$SANAME@$DEVSHELL_PROJECT_ID.iam.gserviceaccount.com --role=roles/bigquery.admin
+gcloud projects add-iam-policy-binding $DEVSHELL_PROJECT_ID --member=serviceAccount:$SANAME@$DEVSHELL_PROJECT_ID.iam.gserviceaccount.com --role=roles/storage.admin
+gcloud iam service-accounts keys create sa-key.json --iam-account $SANAME@$DEVSHELL_PROJECT_ID.iam.gserviceaccount.com
+export GOOGLE_APPLICATION_CREDENTIALS=${PWD}/sa-key.json
+gsutil cp gs://$DEVSHELL_PROJECT_ID/analyze-images.py .
 
 ```
 
-## Task - 6 : Prepare the Kubernetes cluster
+## Open Editor and replace the content of "analyze-images.py" file with
 
-// Open Editor -> wp-k8s -> wp-env.yaml
-Change username and password to :-
-username : wp_user
-password : stormwind_rules
+```python
+# Dataset: image_classification_dataset
 
-// Save.
+# Table name: image_text_detail
 
-```bash
-cd wp-k8s
+import os
 
-kubectl create -f wp-env.yaml
+import sys
 
-gcloud iam service-accounts keys create key.json \
- --iam-account=cloud-sql-proxy@$GOOGLE_CLOUD_PROJECT.iam.gserviceaccount.com
-kubectl create secret generic cloudsql-instance-credentials \
- --from-file key.json
+
+
+# Import Google Cloud Library modules
+
+from google.cloud import storage, bigquery, language, vision, translate_v2
+
+
+
+if ('GOOGLE_APPLICATION_CREDENTIALS' in os.environ):
+
+    if (not os.path.exists(os.environ['GOOGLE_APPLICATION_CREDENTIALS'])):
+
+        print ("The GOOGLE_APPLICATION_CREDENTIALS file does not exist.\n")
+
+        exit()
+
+else:
+
+    print ("The GOOGLE_APPLICATION_CREDENTIALS environment variable is not defined.\n")
+
+    exit()
+
+
+
+if len(sys.argv)<3:
+
+    print('You must provide parameters for the Google Cloud project ID and Storage bucket')
+
+    print ('python3 '+sys.argv[0]+ '[PROJECT_NAME] [BUCKET_NAME]')
+
+    exit()
+
+
+
+project_name = sys.argv[1]
+
+bucket_name = sys.argv[2]
+
+
+
+# Set up our GCS, BigQuery, and Natural Language clients
+
+storage_client = storage.Client()
+
+bq_client = bigquery.Client(project=project_name)
+
+nl_client = language.LanguageServiceClient()
+
+
+
+# Set up client objects for the vision and translate_v2 API Libraries
+
+vision_client = vision.ImageAnnotatorClient()
+
+translate_client = translate_v2.Client()
+
+
+
+# Setup the BigQuery dataset and table objects
+
+dataset_ref = bq_client.dataset('image_classification_dataset')
+
+dataset = bigquery.Dataset(dataset_ref)
+
+table_ref = dataset.table('image_text_detail')
+
+table = bq_client.get_table(table_ref)
+
+
+
+# Create an array to store results data to be inserted into the BigQuery table
+
+rows_for_bq = []
+
+
+
+# Get a list of the files in the Cloud Storage Bucket
+
+files = storage_client.bucket(bucket_name).list_blobs()
+
+bucket = storage_client.bucket(bucket_name)
+
+
+
+print('Processing image files from GCS. This will take a few minutes..')
+
+
+
+# Process files from Cloud Storage and save the result to send to BigQuery
+
+for file in files:
+
+    if file.name.endswith('jpg') or  file.name.endswith('png'):
+
+        file_content = file.download_as_string()
+
+
+
+        # TBD: Create a Vision API image object called image_object
+
+        # Ref: https://googleapis.dev/python/vision/latest/gapic/v1/types.html#google.cloud.vision_v1.types.Image
+
+        from google.cloud import vision_v1
+
+        import io
+
+        client = vision.ImageAnnotatorClient()
+
+
+
+
+
+        # TBD: Detect text in the image and save the response data into an object called response
+
+        # Ref: https://googleapis.dev/python/vision/latest/gapic/v1/api.html#google.cloud.vision_v1.ImageAnnotatorClient.document_text_detection
+
+        image = vision_v1.types.Image(content=file_content)
+
+        response = client.text_detection(image=image)
+
+
+
+        # Save the text content found by the vision API into a variable called text_data
+
+        text_data = response.text_annotations[0].description
+
+
+
+        # Save the text detection response data in <filename>.txt to cloud storage
+
+        file_name = file.name.split('.')[0] + '.txt'
+
+        blob = bucket.blob(file_name)
+
+        # Upload the contents of the text_data string variable to the Cloud Storage file
+
+        blob.upload_from_string(text_data, content_type='text/plain')
+
+
+
+        # Extract the description and locale data from the response file
+
+        # into variables called desc and locale
+
+        # using response object properties e.g. response.text_annotations[0].description
+
+        desc = response.text_annotations[0].description
+
+        locale = response.text_annotations[0].locale
+
+
+
+        # if the locale is English (en) save the description as the translated_txt
+
+        if locale == 'en':
+
+            translated_text = desc
+
+        else:
+
+            # TBD: For non EN locales pass the description data to the translation API
+
+            # ref: https://googleapis.dev/python/translation/latest/client.html#google.cloud.translate_v2.client.Client.translate
+
+            # Set the target_language locale to 'en')
+
+            from google.cloud import translate_v2 as translate
+
+
+
+            client = translate.Client()
+
+            translation = translate_client.translate(text_data, target_language='en')
+
+            translated_text = translation['translatedText']
+
+        print(translated_text)
+
+
+
+        # if there is response data save the original text read from the image,
+
+        # the locale, translated text, and filename
+
+        if len(response.text_annotations) > 0:
+
+            rows_for_bq.append((desc, locale, translated_text, file.name))
+
+
+
+print('Writing Vision API image data to BigQuery...')
+
+# Write original text, locale and translated text to BQ
+
+# TBD: When the script is working uncomment the next line to upload results to BigQuery
+
+errors = bq_client.insert_rows(table, rows_for_bq)
+
+
+
+assert errors == []
 
 ```
 
-## Task - 7 : Create a WordPress deployment
+## In Cloud Shell run
 
-// In editor : "wp-deployment.yaml" -> replace YOUR_SQL_INSTANCE with "griffin-dev-db".
-
-// Save.
-
-```bash
-kubectl create -f wp-deployment.yaml
-kubectl create -f wp-service.yaml
+```
+python3 analyze-images.py $DEVSHELL_PROJECT_ID $DEVSHELL_PROJECT_ID
 ```
 
-## Task - 8 : Enable monitoring
+## Navigation Menu -> BigQuery, Run
 
-// Navigation Menu -> Kubernetes Engine -> Services and Ingress -> Copy Endpoint's address.
-
-// Navigation Menu -> Monitoring -> Uptime Checks -> + CREATE UPTIME CHECK
-Title : Wordpress Uptime
-// Next -> Target
-Hostname : {Endpoint's address} (without http...)
-Path : /
-// Next -> Next -> Create
-
-## Task - 9 : Provide access for an additional engineer :-
-
-// Navigation Menu -> IAM & Admin -> IAM -> ADD
-New Member : {Username 2 from Lab instruction page}
-Role : Project -> Editor
-
-// Save.
+```SQL
+SELECT locale,COUNT(locale) as lcount FROM image_classification_dataset.image_text_detail GROUP BY locale ORDER BY lcount DESC
+```
