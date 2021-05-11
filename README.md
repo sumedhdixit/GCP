@@ -1,57 +1,84 @@
-# Ensure Access & Identity in Google Cloud: Challenge Lab
+# GSP302 : Configure a Firewall and a Startup Script with Deployment Manager :-
 
 ```bash
-gcloud config set compute/zone us-east1-b
+mkdir deployment_manager
+cd deployment_manager
+gsutil cp gs://spls/gsp302/* .
 ```
 
 ```bash
-nano role-definition.yaml
+nano qwiklabs.jinja
 ```
+
+### Delete all the content of qwiklabs.jinja and paste :-
+
+```jinja
+resources:
+- type: compute.v1.instance
+  name: vm-test
+  properties:
+    zone: {{ properties["zone"] }}
+    machineType: https://www.googleapis.com/compute/v1/projects/{{ env["project"] }}/zones/{{ properties["zone"] }}/machineTypes/f1-micro
+    # For examples on how to use startup scripts on an instance, see:
+    #   https://cloud.google.com/compute/docs/startupscript
+    disks:
+    - deviceName: boot
+      type: PERSISTENT
+      boot: true
+      autoDelete: true
+      initializeParams:
+        diskName: disk-{{ env["deployment"] }}
+        sourceImage: https://www.googleapis.com/compute/v1/projects/debian-cloud/global/images/family/debian-9
+    networkInterfaces:
+    - network: https://www.googleapis.com/compute/v1/projects/{{ env["project"] }}/global/networks/default
+      # Access Config required to give the instance a public IP address
+      accessConfigs:
+      - name: External NAT
+        type: ONE_TO_ONE_NAT
+    tags:
+      items:
+        - http
+    metadata:
+      items:
+      - key: startup-script
+        value: |
+          #!/bin/bash
+          apt-get update
+          apt-get install -y apache2
+- type: compute.v1.firewall
+  name: default-allow-http
+  properties:
+    network: https://www.googleapis.com/compute/v1/projects/{{ env["project"] }}/global/networks/default
+    targetTags:
+    - http
+    allowed:
+    - IPProtocol: tcp
+      ports:
+      - '80'
+    sourceRanges:
+    - 0.0.0.0/0
+
+```
+
+### To save press, ctrl + o -> Enter -> ctrl + x
+
+```bash
+nano qwiklabs.yaml
+```
+
+### Delete the content of qwiklabs.yaml and paste :-
 
 ```yaml
-title: "Edirca Storage Update"
-description: "Add and update objects in Google Cloud Storage buckets"
-includedPermissions:
-  - storage.buckets.get
-  - storage.objects.get
-  - storage.objects.list
-  - storage.objects.update
-  - storage.objects.create
+imports:
+  - path: qwiklabs.jinja
+
+resources:
+  - name: qwiklabs
+    type: qwiklabs.jinja
+    properties:
+      zone: us-central1-a
 ```
 
 ```bash
-gcloud iam roles create orca_storage_update \
-   --project $DEVSHELL_PROJECT_ID \
-   --file role-definition.yaml
-```
-
-```bash
-gcloud iam service-accounts create orca-private-cluster-sa \
-   --display-name "Orca Private Cluster Service Account"
-
-gcloud projects add-iam-policy-binding $DEVSHELL_PROJECT_ID \
-   --member serviceAccount:orca-private-cluster-sa@$DEVSHELL_PROJECT_ID.iam.gserviceaccount.com --role roles/monitoring.viewer
-
-gcloud projects add-iam-policy-binding $DEVSHELL_PROJECT_ID \
-   --member serviceAccount:orca-private-cluster-sa@$DEVSHELL_PROJECT_ID.iam.gserviceaccount.com --role roles/monitoring.metricWriter
-
-gcloud projects add-iam-policy-binding $DEVSHELL_PROJECT_ID \
-   --member serviceAccount:orca-private-cluster-sa@$DEVSHELL_PROJECT_ID.iam.gserviceaccount.com --role roles/logging.logWriter
-```
-
-```bash
-gcloud projects add-iam-policy-binding $DEVSHELL_PROJECT_ID \
-   --member serviceAccount:orca-private-cluster-sa@$DEVSHELL_PROJECT_ID.iam.gserviceaccount.com --role projects/$DEVSHELL_PROJECT_ID/roles/orca_storage_update
-
-```
-
-```bash
-gcloud container clusters create orca-test-cluster --network orca-build-vpc --subnetwork orca-build-subnet --service-account orca-private-cluster-sa@qwiklabs-gcp-01-73bc421e624d.iam.gserviceaccount.com --enable-master-authorized-networks --master-authorized-networks 192.168.10.2/32 --enable-ip-alias --enable-private-nodes --master-ipv4-cidr 10.142.0.0/28 --enable-private-endpoint
-
-```
-
-```ssh
-gcloud container clusters get-credentials orca-test-cluster --internal-ip --zone=us-east1-b
-kubectl create deployment hello-server --image=gcr.io/google-samples/hello-app:1.0
-``
+gcloud deployment-manager deployments create test --config=qwiklabs.yaml
 ```
