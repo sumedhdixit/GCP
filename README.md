@@ -1,84 +1,114 @@
-# GSP302 : Configure a Firewall and a Startup Script with Deployment Manager :-
+# GSP323 : Perform Foundational Data, ML, and AI Tasks in Google Cloud: Challenge Lab
+
+## Task - 1 : Run a simple Dataflow job :-
 
 ```bash
-mkdir deployment_manager
-cd deployment_manager
-gsutil cp gs://spls/gsp302/* .
+bq mk lab
+
+gsutil cp gs://cloud-training/gsp323/lab.csv .
+
+cat lab.csv
+
+gsutil cp gs://cloud-training/gsp323/lab.schema .
+
+cat lab.schema
 ```
+
+## Task - 2 : Run a simple Dataproc job
+
+### No Commands needed do it manualy from the console.
+
+## Task - 3 : Run a simple Dataprep job
+
+## No Commands needed do it manualy from the console.
+
+## Task - 4 : AI :-
 
 ```bash
-nano qwiklabs.jinja
-```
+gcloud iam service-accounts create my-natlang-sa \
+  --display-name "my natural language service account"
 
-### Delete all the content of qwiklabs.jinja and paste :-
+gcloud iam service-accounts keys create ~/key.json \
+  --iam-account my-natlang-sa@${GOOGLE_CLOUD_PROJECT}.iam.gserviceaccount.com
 
-```jinja
-resources:
-- type: compute.v1.instance
-  name: vm-test
-  properties:
-    zone: {{ properties["zone"] }}
-    machineType: https://www.googleapis.com/compute/v1/projects/{{ env["project"] }}/zones/{{ properties["zone"] }}/machineTypes/f1-micro
-    # For examples on how to use startup scripts on an instance, see:
-    #   https://cloud.google.com/compute/docs/startupscript
-    disks:
-    - deviceName: boot
-      type: PERSISTENT
-      boot: true
-      autoDelete: true
-      initializeParams:
-        diskName: disk-{{ env["deployment"] }}
-        sourceImage: https://www.googleapis.com/compute/v1/projects/debian-cloud/global/images/family/debian-9
-    networkInterfaces:
-    - network: https://www.googleapis.com/compute/v1/projects/{{ env["project"] }}/global/networks/default
-      # Access Config required to give the instance a public IP address
-      accessConfigs:
-      - name: External NAT
-        type: ONE_TO_ONE_NAT
-    tags:
-      items:
-        - http
-    metadata:
-      items:
-      - key: startup-script
-        value: |
-          #!/bin/bash
-          apt-get update
-          apt-get install -y apache2
-- type: compute.v1.firewall
-  name: default-allow-http
-  properties:
-    network: https://www.googleapis.com/compute/v1/projects/{{ env["project"] }}/global/networks/default
-    targetTags:
-    - http
-    allowed:
-    - IPProtocol: tcp
-      ports:
-      - '80'
-    sourceRanges:
-    - 0.0.0.0/0
+export GOOGLE_APPLICATION_CREDENTIALS="/home/$USER/key.json"
 
-```
-
-### To save press, ctrl + o -> Enter -> ctrl + x
-
-```bash
-nano qwiklabs.yaml
-```
-
-### Delete the content of qwiklabs.yaml and paste :-
-
-```yaml
-imports:
-  - path: qwiklabs.jinja
-
-resources:
-  - name: qwiklabs
-    type: qwiklabs.jinja
-    properties:
-      zone: us-central1-a
 ```
 
 ```bash
-gcloud deployment-manager deployments create test --config=qwiklabs.yaml
+gcloud auth activate-service-account my-natlang-sa@${GOOGLE_CLOUD_PROJECT}.iam.gserviceaccount.com --key-file=$GOOGLE_APPLICATION_CREDENTIALS
+
+gcloud ml language analyze-entities --content="Old Norse texts portray Odin as one-eyed and long-bearded, frequently wielding a spear named Gungnir and wearing a cloak and a broad hat." > result.json
+
+gcloud auth login
+```
+
+(Copy the token from the link provided)
+
+```bash
+gsutil cp result.json gs://YOUR_PROJECT-marking/task4-cnl.result
+
+```
+
+### Create an API key and export as "API_KEY" variable.
+
+```bash
+export API_KEY={Replace with API KEY}
+
+nano request.json
+```
+
+```json
+{
+  "config": {
+    "encoding": "FLAC",
+    "languageCode": "en-US"
+  },
+  "audio": {
+    "uri": "gs://cloud-training/gsp323/task4.flac"
+  }
+}
+```
+
+```bash
+curl -s -X POST -H "Content-Type: application/json" --data-binary @request.json \
+"https://speech.googleapis.com/v1/speech:recognize?key=${API_KEY}" > result.json
+```
+
+```bash
+gsutil cp result.json gs://YOUR_PROJECT-marking/task4-gcs.result
+
+gcloud iam service-accounts create quickstart
+
+gcloud iam service-accounts keys create key.json --iam-account quickstart@${GOOGLE_CLOUD_PROJECT}.iam.gserviceaccount.com
+
+gcloud auth activate-service-account --key-file key.json
+
+export ACCESS_TOKEN=$(gcloud auth print-access-token)
+
+
+nano request.json
+```
+
+```json
+{
+  "inputUri": "gs://spls/gsp154/video/chicago.mp4",
+  "features": ["TEXT_DETECTION"]
+}
+```
+
+```bash
+
+curl -s -H 'Content-Type: application/json' \
+    -H "Authorization: Bearer $ACCESS_TOKEN" \
+    'https://videointelligence.googleapis.com/v1/videos:annotate' \
+    -d @request.json
+
+
+
+curl -s -H 'Content-Type: application/json' -H "Authorization: Bearer $ACCESS_TOKEN" 'https://videointelligence.googleapis.com/v1/operations/OPERATION_FROM_PREVIOUS_REQUEST' > result1.json
+
+
+gsutil cp result1.json gs://YOUR_PROJECT-marking/task4-gvi.result
+
 ```
