@@ -13,7 +13,7 @@ gcloud sql users set-password --host % root --instance wordpress --password Rand
 ```
 
 ```bash
-export ADDRESS=<external IP of blog vm/32>
+export ADDRESS=[external IP of blog vm instance]/32
 ```
 
 ```bash
