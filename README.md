@@ -1,47 +1,37 @@
-# GSP304 : Build and Deploy a Docker Image to a Kubernetes Cluster
-
-## Build Docker image with tag V1
+# GSP305 : Scale Out and Update a Containerized Application on a Kubernetes Cluster
 
 ```bash
-gsutil cp gs://sureskills-ql/challenge-labs/ch04-kubernetes-app-deployment/echo-web.tar.gz .
-```
-
-### OR
-
-```bash
-gsutil cp gs://$DEVSHELL_PROJECT_ID/echo-web.tar.gz .
-```
-
-## Extract downloaded zip
-
-```bash
-tar -xvf echo-web.tar.gz
+gsutil cp gs://sureskills-ql/challenge-labs/ch05-k8s-scale-and-update/echo-web-v2.tar.gz .
 ```
 
 ```bash
-gcloud builds submit --tag gcr.io/$DEVSHELL_PROJECT_ID/echo-app:v1 .
+tar xvzf echo-web-v2.tar.gz
 ```
 
-## Create Kubernetes cluster
-
 ```bash
-gcloud container clusters create echo-cluster --num-nodes 2 --zone us-central1-a --machine-type n1-standard-2
+gcloud builds submit --tag gcr.io/$DEVSHELL_PROJECT_ID/echo-app:v2 .
 ```
 
-## Deploy application to Kubernetes cluster
-
 ```bash
+gcloud container clusters get-credentials echo-cluster --zone us-central1-a
+```
+
+```
 kubectl create deployment echo-web --image=gcr.io/qwiklabs-resources/echo-app:v1
 ```
 
-## Expose app to allow external access
-
-```bash
-kubectl expose deployment echo-web --type=LoadBalancer --port=80 --target-port=8000
+```
+kubectl expose deployment echo-web --type=LoadBalancer --port 80 --target-port 8000
 ```
 
-## Extract Kubernetes services
+```
+kubectl edit deploy echo-web
+```
 
-```bash
-kubectl get svc
+### Change image version 'v1' to 'v2' by pressing "i"
+
+### Save by pressing - Esc -amd then type ":wq"
+
+```
+kubectl scale deploy echo-web --replicas=2
 ```
