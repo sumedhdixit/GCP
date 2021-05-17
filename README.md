@@ -1,37 +1,65 @@
-# GSP305 : Scale Out and Update a Containerized Application on a Kubernetes Cluster
+# GSP306 : Migrate a MySQL Database to Google Cloud SQL
 
 ```bash
-gsutil cp gs://sureskills-ql/challenge-labs/ch05-k8s-scale-and-update/echo-web-v2.tar.gz .
-```
-
-```bash
-tar xvzf echo-web-v2.tar.gz
+export ZONE=us-central1-a
 ```
 
 ```bash
-gcloud builds submit --tag gcr.io/$DEVSHELL_PROJECT_ID/echo-app:v2 .
+gcloud sql instances create wordpress --tier=db-n1-standard-1 --activation-policy=ALWAYS --gce-zone $ZONE
 ```
 
 ```bash
-gcloud container clusters get-credentials echo-cluster --zone us-central1-a
+gcloud sql users set-password --host % root --instance wordpress --password Random306\*
+```
+
+```bash
+export ADDRESS=<external IP of blog vm/32>
+```
+
+```bash
+gcloud sql instances patch wordpress --authorized-networks $ADDRESS --quiet
+```
+
+```bash
+gcloud compute ssh blog --zone=us-central1-a
+```
+
+```bash
+MYSQLIP=$(gcloud sql instances describe wordpress --format="value(ipAddresses.ipAddress)")
+```
+
+```bash
+mysql --host=[INSTANCE_IP_ADDR] \
+ --user=root --password
+```
+
+```SQL
+CREATE DATABASE wordpress;
+CREATE USER 'blogadmin'@'%' IDENTIFIED BY 'Password1*';
+GRANT ALL PRIVILEGES ON wordpress.* TO 'blogadmin'@'%';
+FLUSH PRIVILEGES;
 ```
 
 ```
-kubectl create deployment echo-web --image=gcr.io/qwiklabs-resources/echo-app:v1
+exit
 ```
 
 ```
-kubectl expose deployment echo-web --type=LoadBalancer --port 80 --target-port 8000
+sudo mysqldump -u root -pPassword1\* wordpress > wordpress_backup.sql
 ```
 
 ```
-kubectl edit deploy echo-web
+mysql --host=$MYSQLIP --user=root -pPassword1\* --verbose wordpress < wordpress_backup.sql
 ```
 
-### Change image version 'v1' to 'v2' by pressing "i"
-
-### Save by pressing - Esc -and then type ":wq"
+```
+sudo service apache2 restart
+```
 
 ```
-kubectl scale deploy echo-web --replicas=2
+cd /var/www/html/wordpress
+```
+
+```
+sudo nano wp-config.php
 ```
