@@ -9,7 +9,7 @@ gcloud sql instances create wordpress --tier=db-n1-standard-1 --activation-polic
 ```
 
 ```bash
-gcloud sql users set-password --host % root --instance wordpress --password Gsp306*
+gcloud sql users set-password --host % root --instance wordpress --password Password1*
 ```
 
 ```bash
@@ -35,7 +35,7 @@ mysql --host=[INSTANCE_IP_ADDRESS] \
 
 ```SQL
 CREATE DATABASE wordpress;
-CREATE USER 'blogadmin'@'%' IDENTIFIED BY 'Gsp306*';
+CREATE USER 'blogadmin'@'%' IDENTIFIED BY 'Password1*';
 GRANT ALL PRIVILEGES ON wordpress.* TO 'blogadmin'@'%';
 FLUSH PRIVILEGES;
 ```
@@ -45,11 +45,11 @@ exit
 ```
 
 ```
-sudo mysqldump -u root -pGsp306* wordpress > wordpress_backup.sql
+sudo mysqldump -u root -pPassword1* wordpress > wordpress_backup.sql
 ```
 
 ```
-mysql --host=$MYSQLIP --user=root -pGsp306* --verbose wordpress < wordpress_backup.sql
+mysql --host=$MYSQLIP --user=root -pPassword1* --verbose wordpress < wordpress_backup.sql
 ```
 
 ```
