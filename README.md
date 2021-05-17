@@ -29,7 +29,7 @@ MYSQLIP=$(gcloud sql instances describe wordpress --format="value(ipAddresses.ip
 ```
 
 ```bash
-mysql --host=[INSTANCE_IP_ADDR] \
+mysql --host=[INSTANCE_IP_ADDRESS] \
  --user=root --password
 ```
 
