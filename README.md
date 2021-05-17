@@ -30,7 +30,7 @@ kubectl edit deploy echo-web
 
 ### Change image version 'v1' to 'v2' by pressing "i"
 
-### Save by pressing - Esc -amd then type ":wq"
+### Save by pressing - Esc -and then type ":wq"
 
 ```
 kubectl scale deploy echo-web --replicas=2
