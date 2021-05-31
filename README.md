@@ -26,10 +26,11 @@ gcloud sql instances create kraken-cloud-sql --region us-central1
 
 ## Task 2
 
-Create database - wordpress
-Add user - wordpress (no password)
+### Create database - wordpress
 
-Service account
+### Add user - wordpress (no password)
+
+### Service account
 
 ```
 gcloud iam service-accounts create kraken-wordpress-sa
@@ -111,7 +112,7 @@ goto editor and edit ingress.yaml to include dns address received as output from
 kubectl apply -f ingress.yaml'
 ```
 
-## goto editor and in network-policy.yaml add to end
+### goto editor and in network-policy.yaml add to end
 
 ```
 apiVersion: networking.k8s.io/v1
