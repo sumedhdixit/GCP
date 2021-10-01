@@ -88,4 +88,4 @@ git commit -m "built pipeline init"
 git push
 ```
 
-in last on jenkins windows tamplate just click on built which is in nevigation menu
+in last on jenkins windows template just click on built which is in navigation menu
