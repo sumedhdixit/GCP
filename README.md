@@ -4,7 +4,7 @@
 
 - SSH to kraken-jumphost and run
 
-```
+```bash
 cd /work/dm
 sed -i s/SET_REGION/us-east1/g prod-network.yaml
 
