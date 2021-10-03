@@ -1,161 +1,97 @@
-# Secure Workloads in Google Kubernetes Engine: Challenge Lab
+# Deploy and Manage Cloud Environments with Google Cloud: Challenge Lab
 
-## Task 0: Download the necessary files
+## Task 1 : Create Production Environment
 
-```
-gsutil cp gs://spls/gsp335/gsp335.zip .
-```
+- SSH to kraken-jumphost and run
 
 ```
-unzip gsp335.zip
+cd /work/dm
+sed -i s/SET_REGION/us-east1/g prod-network.yaml
+
+gcloud deployment-manager deployments create prod-network --config=prod-network.yaml
+
+gcloud config set compute/zone us-east1-b
+
+gcloud container clusters create kraken-prod \
+          --num-nodes 2 \
+          --network kraken-prod-vpc \
+          --subnetwork kraken-prod-subnet\
+          --zone us-east1-b
+
+gcloud container clusters get-credentials kraken-prod
+
+cd /work/k8s
+
+for F in $(ls *.yaml); do kubectl create -f $F; done
 ```
 
-## Task 1
+## Task 2 : Setup the Admin instance
 
-```bash
-gcloud container clusters create kraken-cluster \
-   --zone us-central1-c \
-   --machine-type n1-standard-4 \
-   --num-nodes 2 \
-   --enable-network-policy
-```
-
-```bash
-gcloud sql instances create kraken-cloud-sql --region us-central1
-```
-
-## Task 2
-
-### Create database - wordpress
-
-### Add user - wordpress (no password)
-
-### Service account
-
-```
-gcloud iam service-accounts create kraken-wordpress-sa
-```
-
-```
-gcloud projects add-iam-policy-binding $DEVSHELL_PROJECT_ID \
-   --member="serviceAccount:kraken-wordpress-sa@$DEVSHELL_PROJECT_ID.iam.gserviceaccount.com" \
- --role="roles/cloudsql.client"
-```
-
-```
-gcloud iam service-accounts keys create key.json --iam-account=kraken-wordpress-sa@$DEVSHELL_PROJECT_ID.iam.gserviceaccount.com
-```
+- Still in kraken-jumphost's SSH, run
 
 ```bash
-kubectl create secret generic cloudsql-instance-credentials --from-file key.json
+gcloud config set compute/zone us-east1-b
+
+gcloud compute instances create kraken-admin --network-interface="subnet=kraken-mgmt-subnet" --network-interface="subnet=kraken-prod-subnet"
 ```
+
+### Create alert
+
+- Open monitoring
+- Create an alert
+- Configure the policy to email your email and set
+
+```
+   Resource Type : VM Instance
+   Metric : CPU utilization
+   Filter : instance_name
+            Value : kraken-admin
+   Condition : is above
+   Threshold : 50%
+   For : 1 minute
+
+```
+
+## Task 3 : Verify the Spinnaker deployment
+
+- Switch to cloudshell, run
 
 ```bash
-kubectl create secret generic cloudsql-db-credentials \
- --from-literal username=wordpress \
- --from-literal password=''
-```
+gcloud config set compute/zone us-east1-b
 
-### goto editor and reolace isntance name with sql instance name
+gcloud container clusters get-credentials spinnaker-tutorial
 
-`save`
+DECK_POD=$(kubectl get pods --namespace default -l "cluster=spin-deck" -o jsonpath="{.items[0].metadata.name}")
 
-```
-kubectl apply -f wordpress.yaml
-```
-
-## Task 3
+kubectl port-forward --namespace default $DECK_POD 8080:9000 >> /dev/null &
 
 ```
-helm version
+
+- Go to cloudshell webpreview
+
+- Go to applications -> sample
+
+- Open pipelines and manually run the pipeline if it has not already running.
+
+- Approve the deployment to production.
+
+- Check the production frontend endpoint (use http, not the default https)
+
+- Back to cloudshell, run to push a change
+
+```bash
+gcloud config set compute/zone us-east1-b
+
+gcloud source repos clone sample-app
+
+cd sample-app
+touch a
+
+git config --global user.email "$(gcloud config get-value account)"
+git config --global user.name "Student"
+git commit -a -m "change"
+git tag v1.0.1
+git push --tags
 ```
 
-```
-helm repo add stable https://charts.helm.sh/stable
-helm repo update
-```
-
-```
-helm install nginx-ingress stable/nginx-ingress --set rbac.create=true
-```
-
-```
-kubectl get service
-```
-
-```
-. add_ip.sh
-student03aea8d07e853d.labdns.xyz
-```
-
-```
-kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.2.0/cert-manager.yaml
-```
-
-```
-kubectl create clusterrolebinding cluster-admin-binding \
- --clusterrole=cluster-admin \
- --user=$(gcloud config get-value core/account)
-```
-
-### goto editor and edit issuer.yaml to include lab email address
-
-```
-kubectl apply -f issuer.yaml
-```
-
-```
-goto editor and edit ingress.yaml to include dns address received as output from . add_ip.sh
-```
-
-```
-kubectl apply -f ingress.yaml'
-```
-
-### goto editor and in network-policy.yaml add to end
-
-```
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-name: allow-world-to-nginx-ingress
-namespace: default
-spec:
-podSelector:
-matchLabels:
-app: nginx-ingress
-policyTypes:
-
-- Ingress
-  ingress:
-- {}
-```
-
-```
-kubectl apply -f network-policy.yaml
-```
-
-## Task 5
-
-### goto security - Binary authorisatioin
-
-- configure policy
-- disallow all images
-- create specific rules, select cluster
-- add specific rule, type us and select from dropdown, click add
-- custom expetion path
-- add iamge paths given
-- save policy
-  enanble binary authorisation for kuberetes clusater
-
-## Task 6
-
-### edit psp-restrictive.yaml
-
-### line 2 change extensions/v1beta1 to policy/v1beta1
-
-```
-kubectl apply -f psp-restrictive.yaml
-kubectl apply -f psp-role.yaml
-kubectl apply -f psp-use.yaml
-```
+## Thats It !! Make Sure to Star this Repository !!! Happy Coding !!!! :-)
