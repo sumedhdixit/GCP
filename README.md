@@ -29,63 +29,29 @@ limited_model.fit
 
 ```
 
-### Create alert
-
-- Open monitoring
-- Create an alert
-- Configure the policy to email your email and set
-
-```
-   Resource Type : VM Instance
-   Metric : CPU utilization
-   Filter : instance_name
-            Value : kraken-admin
-   Condition : is above
-   Threshold : 50%
-   For : 1 minute
-
-```
-
-## Task 3 : Verify the Spinnaker deployment
-
-- Switch to cloudshell, run
-
 ```bash
-gcloud config set compute/zone us-east1-b
-
-gcloud container clusters get-credentials spinnaker-tutorial
-
-DECK_POD=$(kubectl get pods --namespace default -l "cluster=spin-deck" -o jsonpath="{.items[0].metadata.name}")
-
-kubectl port-forward --namespace default $DECK_POD 8080:9000 >> /dev/null &
-
+limited_model = Sequential()
+limited_model.add(layers.Dense(200, input_shape=(input_size,), activation='relu'))
+limited_model.add(layers.Dense(50, activation='relu'))
+limited_model.add(layers.Dense(20, activation='relu'))
+limited_model.add(layers.Dense(1, activation='sigmoid'))
+limited_model.compile(loss='mean_squared_error', optimizer='adam', metrics=['accuracy'])
+limited_model.fit(limited_train_data, limited_train_labels, epochs=10, batch_size=2048, validation_split=0.1)
 ```
 
-- Go to cloudshell webpreview
+## Add WithConfigBuilder code
 
-- Go to applications -> sample
+```
+config_builder = (WitConfigBuilder(
+    examples_for_wit[:num_datapoints],feature_names=column_names)
+    .set_custom_predict_fn(limited_custom_predict)
+    .set_target_feature('loan_granted')
+    .set_label_vocab(['denied', 'accepted'])
+    .set_compare_custom_predict_fn(custom_predict)
+    .set_model_name('limited')
+    .set_compare_model_name('complete'))
+WitWidget(config_builder, height=800)
 
-- Open pipelines and manually run the pipeline if it has not already running.
-
-- Approve the deployment to production.
-
-- Check the production frontend endpoint (use http, not the default https)
-
-- Back to cloudshell, run to push a change
-
-```bash
-gcloud config set compute/zone us-east1-b
-
-gcloud source repos clone sample-app
-
-cd sample-app
-touch a
-
-git config --global user.email "$(gcloud config get-value account)"
-git config --global user.name "Student"
-git commit -a -m "change"
-git tag v1.0.1
-git push --tags
 ```
 
 ## Thats It !! Make Sure to Star this Repository !!! Happy Coding !!!! :-)
