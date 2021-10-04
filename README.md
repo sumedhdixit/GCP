@@ -1,38 +1,32 @@
-# Deploy and Manage Cloud Environments with Google Cloud: Challenge Lab
+# Explore Machine Learning Models with Explainable AI: Challenge Lab
 
-## Task 1 : Create Production Environment
+## Train the first model
 
-- SSH to kraken-jumphost and run
+- Train the first model on the complete dataset. Use train_data for your data and train_labels for you labels.
 
 ```bash
-cd /work/dm
-sed -i s/SET_REGION/us-east1/g prod-network.yaml
 
-gcloud deployment-manager deployments create prod-network --config=prod-network.yaml
+model = Sequential()
+model.add(layers.Dense(200, input_shape=(input_size,), activation='relu'))
+model.add(layers.Dense(50, activation='relu'))
+model.add(layers.Dense(20, activation='relu'))
+model.add(layers.Dense(1, activation='sigmoid'))
+model.compile(loss='mean_squared_error', optimizer='adam', metrics=['accuracy'])
+model.fit(train_data, train_labels, epochs=10, batch_size=2048, validation_split=0.1)
 
-gcloud config set compute/zone us-east1-b
-
-gcloud container clusters create kraken-prod \
-          --num-nodes 2 \
-          --network kraken-prod-vpc \
-          --subnetwork kraken-prod-subnet\
-          --zone us-east1-b
-
-gcloud container clusters get-credentials kraken-prod
-
-cd /work/k8s
-
-for F in $(ls *.yaml); do kubectl create -f $F; done
 ```
 
-## Task 2 : Setup the Admin instance
+## Train your second model
 
-- Still in kraken-jumphost's SSH, run
+- Train your second model on the limited dataset. Use limited_train_data for your data and limited_train_labels for your labels. Use the same input_size for the limited_model
 
 ```bash
-gcloud config set compute/zone us-east1-b
 
-gcloud compute instances create kraken-admin --network-interface="subnet=kraken-mgmt-subnet" --network-interface="subnet=kraken-prod-subnet"
+create the limited_model = Sequential()
+limited_model.add (your layers)
+limited_model.compile
+limited_model.fit
+
 ```
 
 ### Create alert
