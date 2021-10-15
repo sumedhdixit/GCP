@@ -322,6 +322,8 @@ from summary
 
 ## Task - 10 : Create a Datastudio report
 
+- Copy the following code to the Query editor and then click Run.
+
 ```SQL
 SELECT
 
@@ -343,3 +345,10 @@ WHERE
 
 GROUP BY date
 ```
+
+- Click on EXPLORE DATA > Explore with Data Studio.
+- Authorize Data Studio to access BigQuery.
+- You may fail to create a report for the first-time login of Data Studio. Click + Blank Report and accept the Terms of Service. Go back to the BigQuery page and click Explore with Data Studio again.
+- In the new Data Studio report, select Add a chart > Time series Chart.
+- Add country_cases and country_deaths to the Metric field.
+- Click Save to commit the change.
