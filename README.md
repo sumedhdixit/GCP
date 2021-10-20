@@ -14,7 +14,7 @@
 
 ### 1) ⭐ Give a Star to this Repository.
 
-### 2) 🎯 SUBSCRIBE to <a href="https://www.youtube.com/c/sumedhdixit?sub_confirmaton=1">Sumedh Dixit </a>on YouTube.
+### 2) 🎯 SUBSCRIBE to <a href="https://www.youtube.com/c/sumedhdixit?sub_confirmation=1" target="_blank" rel="noopener noreferrer" >Sumedh Dixit </a>on YouTube.
 
 ### 3) 🔗 Check the "BRANCHES" of this repository for different labs.
 
@@ -22,15 +22,15 @@
 
 ## 🧿 GCP Labs Playlists on Youtube 👇
 
-### 🏆 <a href="https://www.youtube.com/playlist?list=PLeoj-5tvYy-gDUWkaPj52_s8XYK6d9Ckv">Challenge Labs </a>
+### 🏆 <a href="https://www.youtube.com/playlist?list=PLeoj-5tvYy-gDUWkaPj52_s8XYK6d9Ckv" rel="noopener noreferrer">Challenge Labs </a>
 
-### 💻 <a href="https://www.youtube.com/playlist?list=PLeoj-5tvYy-jjvfesplylQTfvHYTo0bgo">Google Cloud Labs</a>
+### 💻 <a href="https://www.youtube.com/playlist?list=PLeoj-5tvYy-jjvfesplylQTfvHYTo0bgo" rel="noopener noreferrer">Google Cloud Labs</a>
 
 ---
 
 ## 🌩️ Want to learn Cloud Computing in Hindi ? 👇
 
-### 🖥️ <a href="https://www.youtube.com/playlist?list=PLeoj-5tvYy-hHAjWKL4k2_j16MZRjQPu4">Learn Cloud Computing in Hindi</a>
+### 🖥️ <a href="https://www.youtube.com/playlist?list=PLeoj-5tvYy-hHAjWKL4k2_j16MZRjQPu4" rel="noopener noreferrer" >Learn Cloud Computing in Hindi</a>
 
 ---
 
