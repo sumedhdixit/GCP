@@ -14,7 +14,7 @@
 
 ### 1) ⭐ Give a Star to this Repository.
 
-### 2) 🎯 SUBSCRIBE to <a href="https://www.youtube.com/c/sumedhdixit?sub_confirmation=1" target="_blank" rel="noopener noreferrer" >Sumedh Dixit </a>on YouTube.
+### 2) 🎯 SUBSCRIBE to <a href="https://www.youtube.com/c/sumedhdixit?sub_confirmation=1" target="_blank" rel="noopener noreferrer" >Sumedh Dixit</a> on YouTube.
 
 ### 3) 🔗 Check the "BRANCHES" of this repository for different labs.
 
